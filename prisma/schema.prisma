@@ -23,14 +23,21 @@ enum BusinessStatus {
 }
 
 enum MediaType {
-  VIDEO
-  YOUTUBE_VIDEO
-  DOCUMENT
-  IMAGE
-  GALLERY
-  BROCHURE
-  PITCH_DECK
-  WEBSITE
+  // Documents
+  REGISTRATION_CERTIFICATE  // Company Registration Certificate
+  PAN_CERTIFICATE           // PAN Certificate
+  FINANCIAL_DOCUMENT        // Financial Documents
+  PITCH_DECK                // Pitch Deck
+  BROCHURE                  // Brochures
+  DOCUMENT                  // Other Documents
+
+  // Media
+  COMPANY_LOGO              // Company Logo
+  GALLERY                   // Gallery images (up to 6)
+  IMAGE                     // General images
+  VIDEO                     // Uploaded videos
+  YOUTUBE_VIDEO             // YouTube video links
+  WEBSITE                   // Website links
 }
 
 enum MediaApprovalStatus {

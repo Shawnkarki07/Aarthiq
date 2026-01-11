@@ -39,8 +39,12 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 
+# Create uploads directory structure
+RUN mkdir -p uploads/logos uploads/gallery uploads/images uploads/certificates \
+    uploads/financial uploads/pitch-decks uploads/brochures uploads/documents uploads/videos
+
 # Expose port
 EXPOSE 3000
 
-# Run migrations and start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+# Sync schema and start the server
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/index.js"]
