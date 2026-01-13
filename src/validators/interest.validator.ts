@@ -9,14 +9,8 @@ export const submitInterestSchema = z.object({
     investorName: z.string()
       .min(2, 'Name must be at least 2 characters')
       .max(100, 'Name is too long'),
-    phoneNumber: z.string()
-      .min(10, 'Phone number must be at least 10 digits')
-      .max(20, 'Phone number is too long')
-      .regex(/^[0-9+\-\s()]+$/, 'Invalid phone number format'),
-    email: z.string()
-      .email('Invalid email address')
-      .max(255, 'Email is too long')
-      .transform(val => val.toLowerCase()),
+    phoneNumber: z.string(),
+    email: z.string().optional(),
     message: z.string()
       .max(1000, 'Message is too long')
       .optional(),

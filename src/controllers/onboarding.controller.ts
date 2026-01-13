@@ -148,10 +148,22 @@ export const completeRegistrationHandler = async (
   try {
     const { token, password, ...businessData } = req.body;
 
+    // Extract uploaded files
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+
+    const uploadedFiles = {
+      companyLogo: files?.companyLogo?.[0] || null,
+      registrationCertificate: files?.registrationCertificate?.[0] || null,
+      panCertificate: files?.panCertificate?.[0] || null,
+      pitchDeck: files?.pitchDeck?.[0] || null,
+      galleryImages: files?.galleryImages || []
+    };
+
     const result = await completeBusinessRegistration(
       token,
       password,
-      businessData
+      businessData,
+      uploadedFiles
     );
 
     return res.status(201).json({

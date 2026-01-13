@@ -21,9 +21,13 @@ const app: Application = express();
 const PORT = process.env.PORT ;
 
 // Middleware
-// Configure CORS
+// Configure CORS - support multiple origins from comma-separated FRONTEND_URL
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:8081')
+  .split(',')
+  .map(url => url.trim());
+
 app.use(cors({
-  origin: [process.env.FRONTEND_URL || 'http://localhost:8081'],
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

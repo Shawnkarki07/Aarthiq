@@ -65,6 +65,11 @@ async function main() {
       description: 'Retail and e-commerce',
     },
     {
+      name: 'Investment',
+      slug: 'investment',
+      description: 'Investment and finance companies',
+    },
+    {
       name: 'Others',
       slug: 'others',
       description: 'Other industries',

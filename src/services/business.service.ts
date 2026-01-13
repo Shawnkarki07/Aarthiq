@@ -373,6 +373,16 @@ export const getBusinessDetailsByIdForAdmin = async (businessId: string) => {
     throw new NotFoundError('Business not found');
   }
 
+  // Convert BigInt fileSize to string for JSON serialization
+  if (business.media && business.media.length > 0) {
+    const mediaWithStringSize = business.media.map(m => ({
+      ...m,
+      fileSize: m.fileSize ? m.fileSize.toString() : null
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (business as any).media = mediaWithStringSize;
+  }
+
   return business;
 };
 

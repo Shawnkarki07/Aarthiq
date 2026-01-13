@@ -39,7 +39,7 @@ services:
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
     ports:
       - "127.0.0.1:3000:3000"
-      - "127.0.0.1:5555:5555"
+      - "0.0.0.0:5555:5555"
     volumes:
       - ./uploads:/app/uploads
     healthcheck:

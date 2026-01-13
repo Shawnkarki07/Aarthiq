@@ -17,6 +17,7 @@ import {
   validateTokenSchema,
   completeRegistrationSchema
 } from '../validators/onboarding.validator';
+import { registrationUpload } from '../config/upload.config';
 
 const router = Router();
 
@@ -85,10 +86,17 @@ router.get(
  * @route   POST /api/onboarding/register
  * @desc    Complete business registration with token
  * @access  Public
+ * @files   companyLogo, registrationCertificate, panCertificate, pitchDeck, galleryImages[]
  */
 router.post(
   '/register',
-  validate(completeRegistrationSchema),
+  registrationUpload.fields([
+    { name: 'companyLogo', maxCount: 1 },
+    { name: 'registrationCertificate', maxCount: 1 },
+    { name: 'panCertificate', maxCount: 1 },
+    { name: 'pitchDeck', maxCount: 1 },
+    { name: 'galleryImages', maxCount: 6 }
+  ]),
   completeRegistrationHandler
 );
 

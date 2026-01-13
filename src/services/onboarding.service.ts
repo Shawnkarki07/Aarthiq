@@ -1,9 +1,19 @@
-import { OnboardingStatus } from '@prisma/client';
+import { OnboardingStatus, MediaType } from '@prisma/client';
 import prisma from '../config/prisma.config';
 import { generateToken, getTokenExpiration, isTokenExpired } from '../utils/token.utils';
 import { hashPassword } from '../utils/password.utils';
 import { sendOnboardingApprovalEmail, sendOnboardingRejectionEmail } from './email.service';
 import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors';
+import { moveFileToBusinessFolder, getFileUrl, deleteFile } from '../config/upload.config';
+
+// Type for uploaded files during registration
+interface RegistrationFiles {
+  companyLogo: Express.Multer.File | null;
+  registrationCertificate: Express.Multer.File | null;
+  panCertificate: Express.Multer.File | null;
+  pitchDeck: Express.Multer.File | null;
+  galleryImages: Express.Multer.File[];
+}
 
 /**
  * Submit initial onboarding request
@@ -198,7 +208,8 @@ export const validateRegistrationToken = async (token: string) => {
 export const completeBusinessRegistration = async (
   token: string,
   password: string,
-  businessData: any
+  businessData: any,
+  uploadedFiles?: RegistrationFiles
 ) => {
   // Validate token
   const request = await prisma.businessOnboardingRequest.findUnique({
@@ -247,8 +258,10 @@ export const completeBusinessRegistration = async (
   if (!category) {
     // Create category if it doesn't exist
     const slug = businessData.industry.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    category = await prisma.category.create({
-      data: {
+    category = await prisma.category.upsert({
+      where: { slug: slug },
+      update: {},
+      create: {
         name: businessData.industry,
         slug: slug
       }
@@ -309,7 +322,7 @@ export const completeBusinessRegistration = async (
         facebookUrl: businessData.facebook || null,
         linkedinUrl: businessData.linkedin || null,
         twitterUrl: businessData.twitter || null,
-        logoUrl: null, // Will be updated after file upload
+        logoUrl: null, // Will be updated after file processing
         status: 'PENDING'
       }
     });
@@ -323,12 +336,150 @@ export const completeBusinessRegistration = async (
     return { businessLogin, business };
   });
 
+  // Process uploaded files after business is created
+  if (uploadedFiles) {
+    try {
+      await processRegistrationFiles(result.business.id, uploadedFiles);
+    } catch (fileError) {
+      console.error('Error processing uploaded files:', fileError);
+      // Don't fail registration if file processing fails
+      // Files can be uploaded later via the upload endpoints
+    }
+  }
+
+  // Fetch updated business with logo URL
+  const updatedBusiness = await prisma.business.findUnique({
+    where: { id: result.business.id }
+  });
+
   return {
     user: {
       id: result.businessLogin.id,
       email: result.businessLogin.email,
       role: 'BUSINESS' as const
     },
-    business: result.business
+    business: updatedBusiness || result.business
   };
 };
+
+/**
+ * Process uploaded files during registration
+ */
+async function processRegistrationFiles(businessId: string, files: RegistrationFiles) {
+  const mediaRecords: Array<{
+    businessId: string;
+    mediaType: MediaType;
+    fileName: string;
+    fileUrl: string;
+    fileSize: bigint;
+    mimeType: string;
+    title: string;
+    displayOrder?: number;
+  }> = [];
+
+  let logoUrl: string | null = null;
+
+  // Process company logo
+  if (files.companyLogo) {
+    const newPath = moveFileToBusinessFolder(files.companyLogo.path, businessId);
+    logoUrl = getFileUrl(newPath);
+
+    mediaRecords.push({
+      businessId,
+      mediaType: 'COMPANY_LOGO',
+      fileName: files.companyLogo.originalname,
+      fileUrl: logoUrl,
+      fileSize: BigInt(files.companyLogo.size),
+      mimeType: files.companyLogo.mimetype,
+      title: 'Company Logo'
+    });
+  }
+
+  // Process registration certificate
+  if (files.registrationCertificate) {
+    const newPath = moveFileToBusinessFolder(files.registrationCertificate.path, businessId);
+    const fileUrl = getFileUrl(newPath);
+
+    mediaRecords.push({
+      businessId,
+      mediaType: 'REGISTRATION_CERTIFICATE',
+      fileName: files.registrationCertificate.originalname,
+      fileUrl,
+      fileSize: BigInt(files.registrationCertificate.size),
+      mimeType: files.registrationCertificate.mimetype,
+      title: 'Registration Certificate'
+    });
+  }
+
+  // Process PAN certificate
+  if (files.panCertificate) {
+    const newPath = moveFileToBusinessFolder(files.panCertificate.path, businessId);
+    const fileUrl = getFileUrl(newPath);
+
+    mediaRecords.push({
+      businessId,
+      mediaType: 'PAN_CERTIFICATE',
+      fileName: files.panCertificate.originalname,
+      fileUrl,
+      fileSize: BigInt(files.panCertificate.size),
+      mimeType: files.panCertificate.mimetype,
+      title: 'PAN Certificate'
+    });
+  }
+
+  // Process pitch deck
+  if (files.pitchDeck) {
+    const newPath = moveFileToBusinessFolder(files.pitchDeck.path, businessId);
+    const fileUrl = getFileUrl(newPath);
+
+    mediaRecords.push({
+      businessId,
+      mediaType: 'PITCH_DECK',
+      fileName: files.pitchDeck.originalname,
+      fileUrl,
+      fileSize: BigInt(files.pitchDeck.size),
+      mimeType: files.pitchDeck.mimetype,
+      title: 'Pitch Deck'
+    });
+  }
+
+  // Process gallery images
+  if (files.galleryImages && files.galleryImages.length > 0) {
+    for (let i = 0; i < files.galleryImages.length; i++) {
+      const file = files.galleryImages[i];
+      const newPath = moveFileToBusinessFolder(file.path, businessId);
+      const fileUrl = getFileUrl(newPath);
+
+      mediaRecords.push({
+        businessId,
+        mediaType: 'GALLERY',
+        fileName: file.originalname,
+        fileUrl,
+        fileSize: BigInt(file.size),
+        mimeType: file.mimetype,
+        title: `Gallery Image ${i + 1}`,
+        displayOrder: i + 1
+      });
+    }
+  }
+
+  // Save all media records and update logo URL in a transaction
+  if (mediaRecords.length > 0 || logoUrl) {
+    await prisma.$transaction(async (tx) => {
+      // Create media records
+      if (mediaRecords.length > 0) {
+        await tx.businessMedia.createMany({
+          data: mediaRecords
+        });
+      }
+
+      // Update business logo URL
+      if (logoUrl) {
+        await tx.business.update({
+          where: { id: businessId },
+          data: { logoUrl }
+        });
+      }
+    });
+  }
+}

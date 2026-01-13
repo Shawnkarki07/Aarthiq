@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma.config';
-import { getFileUrl, deleteFile, GALLERY_LIMIT } from '../config/upload.config';
+import { getFileUrl, deleteFile, GALLERY_LIMIT, ALLOWED_MIME_TYPES } from '../config/upload.config';
 import { MediaType } from '@prisma/client';
 
 // Valid media types from Prisma schema
@@ -48,6 +48,17 @@ export const uploadBusinessMedia = async (req: Request, res: Response) => {
       return res.status(400).json({
         error: 'Invalid media type',
         validTypes: VALID_MEDIA_TYPES
+      });
+    }
+
+    // Validate file type for this media type
+    const allowedTypes = ALLOWED_MIME_TYPES[normalizedMediaType as keyof typeof ALLOWED_MIME_TYPES] || [];
+    if (!allowedTypes.includes(file.mimetype)) {
+      deleteFile(file.path);
+      return res.status(400).json({
+        error: `Invalid file type for ${normalizedMediaType}`,
+        receivedType: file.mimetype,
+        allowedTypes: allowedTypes
       });
     }
 
@@ -158,12 +169,26 @@ export const uploadBusinessLogo = async (req: Request, res: Response) => {
     const { businessId } = req.body;
     const file = req.file;
 
+    console.log('Logo upload request:', { businessId, hasFile: !!file, fileName: file?.originalname });
+
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     if (!businessId) {
+      deleteFile(file.path);
       return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(businessId)) {
+      console.error('Invalid UUID format:', businessId);
+      deleteFile(file.path);
+      return res.status(400).json({ 
+        error: 'Invalid Business ID format',
+        details: 'Business ID must be a valid UUID' 
+      });
     }
 
     // Verify business exists
@@ -177,7 +202,9 @@ export const uploadBusinessLogo = async (req: Request, res: Response) => {
     }
 
     // Generate file URL
+    console.log('File path:', file.path);
     const logoUrl = getFileUrl(file.path);
+    console.log('Generated logoUrl:', logoUrl);
 
     // Delete existing logo media if any
     await prisma.businessMedia.deleteMany({

@@ -39,6 +39,9 @@ const ALLOWED_MIME_TYPES = {
     'application/pdf',
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'application/x-excel',
+    'application/x-msexcel',
   ],
   PITCH_DECK: [
     'application/pdf',
@@ -50,6 +53,9 @@ const ALLOWED_MIME_TYPES = {
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
   ],
 
   // Video
@@ -109,16 +115,11 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter
+// File filter - disabled for now, will validate in controller
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const mediaType = (req.body.mediaType || 'DOCUMENT').toUpperCase();
-  const allowedTypes = ALLOWED_MIME_TYPES[mediaType as keyof typeof ALLOWED_MIME_TYPES] || ALLOWED_MIME_TYPES.DOCUMENT;
-
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error(`Invalid file type for ${mediaType}. Allowed types: ${allowedTypes.join(', ')}`));
-  }
+  // Accept all files here, validation will happen in the controller
+  // This is necessary because req.body is not available during multipart parsing
+  cb(null, true);
 };
 
 // Generic upload with max file size (100MB for videos)
@@ -128,10 +129,39 @@ export const upload = multer({
   limits: { fileSize: FILE_SIZE_LIMITS.VIDEO }
 });
 
+// Logo-specific storage configuration
+const logoStorage = multer.diskStorage({
+  destination: (req: Request, file, cb) => {
+    const businessId = req.body.businessId || 'temp';
+    const directory = 'logos';
+    const uploadPath = path.join(UPLOAD_DIR, directory, businessId);
+    ensureDirectoryExists(uploadPath);
+    cb(null, uploadPath);
+  },
+  filename: (req: Request, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    const baseName = path.basename(file.originalname, ext)
+      .replace(/[^a-zA-Z0-9]/g, '-')
+      .toLowerCase();
+    cb(null, `${baseName}-${uniqueSuffix}${ext}`);
+  }
+});
+
+// Logo file filter - only accept images
+const logoFileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Invalid logo file type. Allowed types: ${allowedTypes.join(', ')}`));
+  }
+};
+
 // Logo-specific upload (smaller limit)
 export const uploadLogo = multer({
-  storage,
-  fileFilter,
+  storage: logoStorage,
+  fileFilter: logoFileFilter,
   limits: { fileSize: FILE_SIZE_LIMITS.COMPANY_LOGO }
 });
 
@@ -144,9 +174,18 @@ export const getFileSizeLimit = (mediaType: string): number => {
 // Helper function to get file URL
 export const getFileUrl = (filePath: string): string => {
   const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-  // Remove the uploads directory prefix and create URL
-  const relativePath = filePath.replace(UPLOAD_DIR, '').replace(/\\/g, '/');
-  return `${baseUrl}/uploads${relativePath}`;
+  
+  // Normalize path separators
+  let normalizedPath = filePath.replace(/\\/g, '/');
+  
+  // Remove any leading ./ or /
+  normalizedPath = normalizedPath.replace(/^\.\//, '').replace(/^\//, '');
+  
+  // Remove uploads/ prefix if it exists (since we'll add it back)
+  normalizedPath = normalizedPath.replace(/^uploads\//, '');
+  
+  // Construct the final URL
+  return `${baseUrl}/uploads/${normalizedPath}`;
 };
 
 // Helper function to delete file
@@ -161,6 +200,91 @@ export const deleteFile = (filePath: string): boolean => {
     console.error('Error deleting file:', error);
     return false;
   }
+};
+
+// Registration-specific storage configuration
+const registrationStorage = multer.diskStorage({
+  destination: (req: Request, file, cb) => {
+    // Determine directory based on field name
+    let directory = 'documents';
+    if (file.fieldname === 'companyLogo') {
+      directory = 'logos';
+    } else if (file.fieldname === 'registrationCertificate' || file.fieldname === 'panCertificate') {
+      directory = 'certificates';
+    } else if (file.fieldname === 'pitchDeck') {
+      directory = 'pitch-decks';
+    } else if (file.fieldname === 'galleryImages') {
+      directory = 'gallery';
+    }
+
+    // Use 'temp' folder during registration, will be moved after business is created
+    const uploadPath = path.join(UPLOAD_DIR, directory, 'temp');
+    ensureDirectoryExists(uploadPath);
+
+    cb(null, uploadPath);
+  },
+  filename: (req: Request, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    const baseName = path.basename(file.originalname, ext)
+      .replace(/[^a-zA-Z0-9]/g, '-')
+      .toLowerCase();
+
+    cb(null, `${baseName}-${uniqueSuffix}${ext}`);
+  }
+});
+
+// Registration file filter - allow images and documents
+const registrationFileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const documentTypes = [
+    'application/pdf',
+    'image/jpeg', 'image/jpg', 'image/png',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  ];
+
+  let allowedTypes: string[] = [];
+
+  if (file.fieldname === 'companyLogo' || file.fieldname === 'galleryImages') {
+    allowedTypes = imageTypes;
+  } else if (file.fieldname === 'pitchDeck') {
+    allowedTypes = [
+      'application/pdf',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    ];
+  } else {
+    // Certificates and other documents
+    allowedTypes = documentTypes;
+  }
+
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Invalid file type for ${file.fieldname}. Allowed: ${allowedTypes.join(', ')}`));
+  }
+};
+
+// Registration upload middleware (handles multiple files)
+export const registrationUpload = multer({
+  storage: registrationStorage,
+  fileFilter: registrationFileFilter,
+  limits: { fileSize: FILE_SIZE_LIMITS.PITCH_DECK } // 50MB max for pitch decks
+});
+
+// Move file from temp to business-specific folder
+export const moveFileToBusinessFolder = (tempPath: string, businessId: string): string => {
+  const directory = path.dirname(tempPath);
+  const fileName = path.basename(tempPath);
+  const newDirectory = directory.replace('/temp', `/${businessId}`);
+
+  ensureDirectoryExists(newDirectory);
+
+  const newPath = path.join(newDirectory, fileName);
+  fs.renameSync(tempPath, newPath);
+
+  return newPath;
 };
 
 export { UPLOAD_DIR, FILE_SIZE_LIMITS, ALLOWED_MIME_TYPES, GALLERY_LIMIT, MEDIA_TYPE_DIRECTORIES };

@@ -132,7 +132,7 @@ model Business {
   ipoTimeHorizon            String?        @map("ipo_time_horizon") @db.VarChar(100) // e.g., "3-5 years"
 
   // Description & Content
-  briefDescription          String         @map("brief_description") @db.VarChar(200)
+  briefDescription          String         @map("brief_description") @db.VarChar(2000)
   fullDescription           String?        @map("full_description") @db.Text
   vision                    String?        @db.Text
   mission                   String?        @db.Text
