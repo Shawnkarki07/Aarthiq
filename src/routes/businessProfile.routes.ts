@@ -4,7 +4,9 @@ import {
   updateOwnProfileHandler,
   getOwnBusinessInterestsHandler,
   changePasswordHandler,
-  requestRemovalHandler
+  requestRemovalHandler,
+  updateInterestFollowUpHandler,
+  addInterestFollowUpHandler
 } from '../controllers/businessProfile.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validation.middleware';
@@ -48,6 +50,26 @@ router.get(
   '/interests',
   validate(listInterestsSchema),
   getOwnBusinessInterestsHandler
+);
+
+/**
+ * @route   PUT /api/business/interests/:id
+ * @desc    Update interest follow-up details (contacted, remarks)
+ * @access  Private (Business)
+ */
+router.put(
+  '/interests/:id',
+  updateInterestFollowUpHandler
+);
+
+/**
+ * @route   POST /api/business/interests/:id/followups
+ * @desc    Add a new follow-up to an interest submission
+ * @access  Private (Business)
+ */
+router.post(
+  '/interests/:id/followups',
+  addInterestFollowUpHandler
 );
 
 /**

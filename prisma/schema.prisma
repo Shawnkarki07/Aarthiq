@@ -215,22 +215,43 @@ model BusinessMedia {
 
 // Interest Submissions (Investors expressing interest)
 model InterestSubmission {
-  id            String   @id @default(uuid()) @db.Uuid
-  businessId    String   @map("business_id") @db.Uuid
-  investorName  String   @map("investor_name") @db.VarChar(100)
-  phoneNumber   String   @map("phone_number") @db.VarChar(20)
-  email         String   @db.VarChar(255)
-  message       String?  @db.Text // Investment interest details message
-  hasConsent    Boolean  @default(true) @map("has_consent") // User agreed to Terms & Conditions
-  submittedAt   DateTime @default(now()) @map("submitted_at")
+  id              String   @id @default(uuid()) @db.Uuid
+  businessId      String   @map("business_id") @db.Uuid
+  investorName    String   @map("investor_name") @db.VarChar(100)
+  phoneNumber     String   @map("phone_number") @db.VarChar(20)
+  email           String   @db.VarChar(255)
+  message         String?  @db.Text // Investment interest details message
+  hasConsent      Boolean  @default(true) @map("has_consent") // User agreed to Terms & Conditions
+  submittedAt     DateTime @default(now()) @map("submitted_at")
+
+  // Follow-up tracking fields
+  contacted       Boolean  @default(false) // Whether the business has contacted the investor
+  followUpRemarks String?  @map("follow_up_remarks") @db.Text // Legacy field - kept for backward compatibility
 
   // Relations
   business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  followUps     InterestFollowUp[]
 
   @@index([businessId])
   @@index([email])
   @@index([submittedAt(sort: Desc)])
   @@map("interest_submissions")
+}
+
+// Interest Follow-ups (Multiple follow-up entries per interest)
+model InterestFollowUp {
+  id                    String   @id @default(uuid()) @db.Uuid
+  interestSubmissionId  String   @map("interest_submission_id") @db.Uuid
+  followUpNumber        Int      @map("follow_up_number") // 1, 2, 3, etc.
+  remarks               String   @db.Text
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  // Relations
+  interestSubmission    InterestSubmission @relation(fields: [interestSubmissionId], references: [id], onDelete: Cascade)
+
+  @@index([interestSubmissionId])
+  @@index([followUpNumber])
+  @@map("interest_follow_ups")
 }
 
 // Business Onboarding Requests (Pre-registration form submissions)

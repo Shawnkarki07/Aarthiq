@@ -5,7 +5,7 @@ import {
   changeBusinessPassword,
   requestBusinessRemoval
 } from '../services/businessProfile.service';
-import { getBusinessInterests } from '../services/interest.service';
+import { getBusinessInterests, updateInterestFollowUp, addInterestFollowUp } from '../services/interest.service';
 
 /**
  * GET /api/business/profile
@@ -130,6 +130,75 @@ export const requestRemovalHandler = async (
 
     return res.status(200).json({
       message: 'Removal request submitted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/business/interests/:id
+ * Update interest follow-up details (contacted status and remarks)
+ */
+export const updateInterestFollowUpHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { id } = req.params;
+    const { contacted, followUpRemarks } = req.body;
+
+    // Get the business ID for this login
+    const business = await getOwnBusinessProfile(req.user.id);
+
+    const updated = await updateInterestFollowUp(id, business.id, {
+      contacted,
+      followUpRemarks
+    });
+
+    return res.status(200).json({
+      message: 'Interest updated successfully',
+      interest: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/business/interests/:id/followups
+ * Add a new follow-up to an interest submission
+ */
+export const addInterestFollowUpHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { id } = req.params;
+    const { remarks } = req.body;
+
+    if (!remarks || remarks.trim() === '') {
+      return res.status(400).json({ error: 'Remarks are required' });
+    }
+
+    // Get the business ID for this login
+    const business = await getOwnBusinessProfile(req.user.id);
+
+    const followUp = await addInterestFollowUp(id, business.id, remarks);
+
+    return res.status(201).json({
+      message: 'Follow-up added successfully',
+      followUp
     });
   } catch (error) {
     next(error);

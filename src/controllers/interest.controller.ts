@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { submitInterest, getAllInterests } from '../services/interest.service';
+import { submitInterest, getAllInterests, getBusinessInterests, updateInterestFollowUp, addInterestFollowUp } from '../services/interest.service';
 
 /**
  * POST /api/interests
@@ -53,6 +53,90 @@ export const getAllInterestsHandler = async (
     return res.status(200).json({
       message: 'Interests fetched successfully',
       ...result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/interests/business/:businessId
+ * Get interest submissions for a specific business (Admin only)
+ */
+export const getBusinessInterestsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { businessId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 100;
+
+    const result = await getBusinessInterests(businessId, { page, limit });
+
+    return res.status(200).json({
+      message: 'Business interests fetched successfully',
+      ...result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/interests/:id
+ * Update interest follow-up details (Admin only)
+ */
+export const updateInterestHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { contacted, followUpRemarks, businessId } = req.body;
+
+    const updated = await updateInterestFollowUp(id, businessId, {
+      contacted,
+      followUpRemarks
+    });
+
+    return res.status(200).json({
+      message: 'Interest updated successfully',
+      interest: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/interests/:id/followups
+ * Add a new follow-up to an interest submission (Admin only)
+ */
+export const addInterestFollowUpHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { remarks, businessId } = req.body;
+
+    if (!remarks || remarks.trim() === '') {
+      return res.status(400).json({ error: 'Remarks are required' });
+    }
+
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    const followUp = await addInterestFollowUp(id, businessId, remarks);
+
+    return res.status(201).json({
+      message: 'Follow-up added successfully',
+      followUp
     });
   } catch (error) {
     next(error);

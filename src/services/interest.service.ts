@@ -98,7 +98,12 @@ export const getBusinessInterests = async (
       where: { businessId },
       orderBy: { submittedAt: 'desc' },
       skip,
-      take: limit
+      take: limit,
+      include: {
+        followUps: {
+          orderBy: { followUpNumber: 'asc' }
+        }
+      }
     }),
     prisma.interestSubmission.count({ where: { businessId } })
   ]);
@@ -137,6 +142,9 @@ export const getAllInterests = async (filters: {
             registrationNumber: true,
             contactEmail: true
           }
+        },
+        followUps: {
+          orderBy: { followUpNumber: 'asc' }
         }
       }
     }),
@@ -152,4 +160,90 @@ export const getAllInterests = async (filters: {
       totalPages: Math.ceil(total / limit)
     }
   };
+};
+
+/**
+ * Update interest submission follow-up details (Business owner only)
+ */
+export const updateInterestFollowUp = async (
+  interestId: string,
+  businessId: string,
+  data: {
+    contacted?: boolean;
+    followUpRemarks?: string;
+  }
+) => {
+  // Verify the interest belongs to this business
+  const interest = await prisma.interestSubmission.findFirst({
+    where: {
+      id: interestId,
+      businessId: businessId
+    }
+  });
+
+  if (!interest) {
+    throw new NotFoundError('Interest submission not found');
+  }
+
+  // Update the interest
+  const updated = await prisma.interestSubmission.update({
+    where: { id: interestId },
+    data: {
+      contacted: data.contacted,
+      followUpRemarks: data.followUpRemarks
+    }
+  });
+
+  return updated;
+};
+
+/**
+ * Add a new follow-up to an interest submission
+ */
+export const addInterestFollowUp = async (
+  interestId: string,
+  businessId: string,
+  remarks: string
+) => {
+  // Verify the interest belongs to this business
+  const interest = await prisma.interestSubmission.findFirst({
+    where: {
+      id: interestId,
+      businessId: businessId
+    },
+    include: {
+      followUps: {
+        orderBy: { followUpNumber: 'desc' },
+        take: 1
+      }
+    }
+  });
+
+  if (!interest) {
+    throw new NotFoundError('Interest submission not found');
+  }
+
+  // Calculate the next follow-up number
+  const nextFollowUpNumber = interest.followUps.length > 0
+    ? interest.followUps[0].followUpNumber + 1
+    : 1;
+
+  // Create the new follow-up
+  const followUp = await prisma.interestFollowUp.create({
+    data: {
+      interestSubmissionId: interestId,
+      followUpNumber: nextFollowUpNumber,
+      remarks: remarks
+    }
+  });
+
+  // Also mark as contacted if not already
+  if (!interest.contacted) {
+    await prisma.interestSubmission.update({
+      where: { id: interestId },
+      data: { contacted: true }
+    });
+  }
+
+  return followUp;
 };

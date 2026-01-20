@@ -41,7 +41,7 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Routes
 app.get('/', (req: Request, res: Response) => {
-  res.send('Backend is running!!!');
+  res.send(' Aarthiq Backend is running!!!');
 });
 
 app.use('/api/auth', authRoutes);
