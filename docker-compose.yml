@@ -1,6 +1,16 @@
-version: '3.8'
+# =============================================================================
+# Aarthiq Backend - Docker Compose Configuration
+# =============================================================================
+# Project: Aarthiq (Capital Bridge Nepal)
+# Services: PostgreSQL, Backend API
+# =============================================================================
+
+name: aarthiq
 
 services:
+  # ===========================================================================
+  # PostgreSQL Database
+  # ===========================================================================
   postgres:
     image: postgres:16-alpine
     container_name: aarthiq_postgres
@@ -10,15 +20,21 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-aarthiq_db}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - aarthiq_postgres_data:/var/lib/postgresql/data
     ports:
+      # Accessible on localhost:5432 for Prisma Studio
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-aarthiq_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - aarthiq_network
 
+  # ===========================================================================
+  # Backend API Service
+  # ===========================================================================
   backend:
     build:
       context: .
@@ -38,8 +54,8 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
     ports:
+      # Backend API - localhost only (reverse proxy handles public access)
       - "127.0.0.1:3000:3000"
-      - "0.0.0.0:5555:5555"
     volumes:
       - ./uploads:/app/uploads
     healthcheck:
@@ -47,7 +63,24 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
+    networks:
+      - aarthiq_network
 
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  aarthiq_network:
+    driver: bridge
+    name: aarthiq_network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+# IMPORTANT: Named volumes with explicit names prevent data loss
+# The volume name is fixed regardless of the directory you run docker-compose from
 volumes:
-  postgres_data:
+  aarthiq_postgres_data:
+    name: aarthiq_postgres_data
     driver: local
