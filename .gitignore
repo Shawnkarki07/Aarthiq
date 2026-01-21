@@ -31,3 +31,12 @@ Thumbs.db
 
 # Prisma
 prisma/migrations/
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.yaml
+.dockerignore
+get-docker.sh
+
+
