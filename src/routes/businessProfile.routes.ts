@@ -6,7 +6,13 @@ import {
   changePasswordHandler,
   requestRemovalHandler,
   updateInterestFollowUpHandler,
-  addInterestFollowUpHandler
+  addInterestFollowUpHandler,
+  updateFollowUpHandler,
+  deleteFollowUpHandler,
+  getLeadSourcesHandler,
+  addLeadSourceHandler,
+  deleteLeadSourceHandler,
+  getTodayFollowUpsHandler
 } from '../controllers/businessProfile.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validation.middleware';
@@ -53,8 +59,15 @@ router.get(
 );
 
 /**
+ * @route   GET /api/business/interests/today
+ * @desc    Get interests with follow-ups due today
+ * @access  Private (Business)
+ */
+router.get('/interests/today', getTodayFollowUpsHandler);
+
+/**
  * @route   PUT /api/business/interests/:id
- * @desc    Update interest follow-up details (contacted, remarks)
+ * @desc    Update interest (status, source, contacted, remarks)
  * @access  Private (Business)
  */
 router.put(
@@ -93,5 +106,46 @@ router.post(
   validate(requestRemovalSchema),
   requestRemovalHandler
 );
+
+/**
+ * @route   PUT /api/business/followups/:followUpId
+ * @desc    Update a follow-up
+ * @access  Private (Business)
+ */
+router.put(
+  '/followups/:followUpId',
+  updateFollowUpHandler
+);
+
+/**
+ * @route   DELETE /api/business/followups/:followUpId
+ * @desc    Delete a follow-up
+ * @access  Private (Business)
+ */
+router.delete(
+  '/followups/:followUpId',
+  deleteFollowUpHandler
+);
+
+/**
+ * @route   GET /api/business/lead-sources
+ * @desc    Get lead sources for own business
+ * @access  Private (Business)
+ */
+router.get('/lead-sources', getLeadSourcesHandler);
+
+/**
+ * @route   POST /api/business/lead-sources
+ * @desc    Add a custom lead source
+ * @access  Private (Business)
+ */
+router.post('/lead-sources', addLeadSourceHandler);
+
+/**
+ * @route   DELETE /api/business/lead-sources/:sourceId
+ * @desc    Delete a custom lead source
+ * @access  Private (Business)
+ */
+router.delete('/lead-sources/:sourceId', deleteLeadSourceHandler);
 
 export default router;

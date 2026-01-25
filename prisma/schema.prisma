@@ -53,6 +53,12 @@ enum OnboardingStatus {
   REJECTED
 }
 
+enum InterestStatus {
+  NOT_CONTACTED
+  INTERESTED
+  NOT_INTERESTED
+}
+
 // ============================================================================
 // MODELS
 // ============================================================================
@@ -213,44 +219,69 @@ model BusinessMedia {
   @@map("business_media")
 }
 
-// Interest Submissions (Investors expressing interest)
-model InterestSubmission {
-  id              String   @id @default(uuid()) @db.Uuid
-  businessId      String   @map("business_id") @db.Uuid
-  investorName    String   @map("investor_name") @db.VarChar(100)
-  phoneNumber     String   @map("phone_number") @db.VarChar(20)
-  email           String   @db.VarChar(255)
-  message         String?  @db.Text // Investment interest details message
-  hasConsent      Boolean  @default(true) @map("has_consent") // User agreed to Terms & Conditions
-  submittedAt     DateTime @default(now()) @map("submitted_at")
-
-  // Follow-up tracking fields
-  contacted       Boolean  @default(false) // Whether the business has contacted the investor
-  followUpRemarks String?  @map("follow_up_remarks") @db.Text // Legacy field - kept for backward compatibility
+// Lead Sources (Custom sources for CRM)
+model LeadSource {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  isDefault   Boolean  @default(false) @map("is_default") // Default sources like 'aarthiQ Platform'
+  createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
-  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  followUps     InterestFollowUp[]
+  interests   InterestSubmission[]
+
+  @@unique([businessId, name])
+  @@index([businessId])
+  @@map("lead_sources")
+}
+
+// Interest Submissions (Investors expressing interest)
+model InterestSubmission {
+  id              String         @id @default(uuid()) @db.Uuid
+  businessId      String         @map("business_id") @db.Uuid
+  investorName    String         @map("investor_name") @db.VarChar(100)
+  phoneNumber     String         @map("phone_number") @db.VarChar(20)
+  email           String         @db.VarChar(255)
+  message         String?        @db.Text // Investment interest details message
+  hasConsent      Boolean        @default(true) @map("has_consent") // User agreed to Terms & Conditions
+  submittedAt     DateTime       @default(now()) @map("submitted_at")
+
+  // CRM Fields
+  source          String         @default("aarthiQ Platform") @db.VarChar(100) // Lead source
+  sourceId        String?        @map("source_id") @db.Uuid // Optional link to custom LeadSource
+  status          InterestStatus @default(NOT_CONTACTED) // Lead status for CRM tabs
+
+  // Legacy fields - kept for backward compatibility
+  contacted       Boolean        @default(false) // Whether the business has contacted the investor
+  followUpRemarks String?        @map("follow_up_remarks") @db.Text // Legacy field
+
+  // Relations
+  business        Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  leadSource      LeadSource?    @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  followUps       InterestFollowUp[]
 
   @@index([businessId])
   @@index([email])
+  @@index([status])
   @@index([submittedAt(sort: Desc)])
   @@map("interest_submissions")
 }
 
 // Interest Follow-ups (Multiple follow-up entries per interest)
 model InterestFollowUp {
-  id                    String   @id @default(uuid()) @db.Uuid
-  interestSubmissionId  String   @map("interest_submission_id") @db.Uuid
-  followUpNumber        Int      @map("follow_up_number") // 1, 2, 3, etc.
-  remarks               String   @db.Text
-  createdAt             DateTime @default(now()) @map("created_at")
+  id                    String    @id @default(uuid()) @db.Uuid
+  interestSubmissionId  String    @map("interest_submission_id") @db.Uuid
+  followUpNumber        Int       @map("follow_up_number") // 1, 2, 3, etc.
+  remarks               String    @db.Text
+  nextFollowUpDate      DateTime? @map("next_follow_up_date") @db.Date // Scheduled next follow-up
+  createdAt             DateTime  @default(now()) @map("created_at")
 
   // Relations
   interestSubmission    InterestSubmission @relation(fields: [interestSubmissionId], references: [id], onDelete: Cascade)
 
   @@index([interestSubmissionId])
   @@index([followUpNumber])
+  @@index([nextFollowUpDate])
   @@map("interest_follow_ups")
 }
 

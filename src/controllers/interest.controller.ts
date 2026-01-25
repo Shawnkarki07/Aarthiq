@@ -1,5 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import { submitInterest, getAllInterests, getBusinessInterests, updateInterestFollowUp, addInterestFollowUp } from '../services/interest.service';
+import {
+  submitInterest,
+  getAllInterests,
+  getBusinessInterests,
+  updateInterestFollowUp,
+  addInterestFollowUp,
+  updateFollowUp,
+  deleteFollowUp,
+  getAllTodayFollowUps,
+  getAllSources
+} from '../services/interest.service';
+import { InterestStatus } from '@prisma/client';
 
 /**
  * POST /api/interests
@@ -47,8 +58,16 @@ export const getAllInterestsHandler = async (
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
+    const { status, source, businessId, search } = req.query;
 
-    const result = await getAllInterests({ page, limit });
+    const result = await getAllInterests({
+      page,
+      limit,
+      status: status as InterestStatus | undefined,
+      source: source as string | undefined,
+      businessId: businessId as string | undefined,
+      search: search as string | undefined
+    });
 
     return res.status(200).json({
       message: 'Interests fetched successfully',
@@ -86,7 +105,7 @@ export const getBusinessInterestsHandler = async (
 
 /**
  * PUT /api/interests/:id
- * Update interest follow-up details (Admin only)
+ * Update interest (status, source, contacted, remarks) (Admin only)
  */
 export const updateInterestHandler = async (
   req: Request,
@@ -95,11 +114,18 @@ export const updateInterestHandler = async (
 ) => {
   try {
     const { id } = req.params;
-    const { contacted, followUpRemarks, businessId } = req.body;
+    const { contacted, followUpRemarks, businessId, status, source } = req.body;
+
+    // Validate status if provided
+    if (status && !['NOT_CONTACTED', 'INTERESTED', 'NOT_INTERESTED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status value' });
+    }
 
     const updated = await updateInterestFollowUp(id, businessId, {
       contacted,
-      followUpRemarks
+      followUpRemarks,
+      status: status as InterestStatus | undefined,
+      source
     });
 
     return res.status(200).json({
@@ -122,7 +148,7 @@ export const addInterestFollowUpHandler = async (
 ) => {
   try {
     const { id } = req.params;
-    const { remarks, businessId } = req.body;
+    const { remarks, businessId, nextFollowUpDate } = req.body;
 
     if (!remarks || remarks.trim() === '') {
       return res.status(400).json({ error: 'Remarks are required' });
@@ -132,11 +158,112 @@ export const addInterestFollowUpHandler = async (
       return res.status(400).json({ error: 'Business ID is required' });
     }
 
-    const followUp = await addInterestFollowUp(id, businessId, remarks);
+    const followUp = await addInterestFollowUp(id, businessId, remarks, nextFollowUpDate);
 
     return res.status(201).json({
       message: 'Follow-up added successfully',
       followUp
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/interests/followups/:followUpId
+ * Update a follow-up (Admin only)
+ */
+export const updateFollowUpHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { followUpId } = req.params;
+    const { remarks, businessId, nextFollowUpDate } = req.body;
+
+    if (!remarks || remarks.trim() === '') {
+      return res.status(400).json({ error: 'Remarks are required' });
+    }
+
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    const followUp = await updateFollowUp(followUpId, businessId, remarks, nextFollowUpDate);
+
+    return res.status(200).json({
+      message: 'Follow-up updated successfully',
+      followUp
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/interests/followups/:followUpId
+ * Delete a follow-up (Admin only)
+ */
+export const deleteFollowUpHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { followUpId } = req.params;
+    const { businessId } = req.body;
+
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    await deleteFollowUp(followUpId, businessId);
+
+    return res.status(200).json({
+      message: 'Follow-up deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/interests/today
+ * Get all interests with follow-ups due today (Admin only)
+ */
+export const getTodayFollowUpsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const interests = await getAllTodayFollowUps();
+
+    return res.status(200).json({
+      message: 'Today\'s follow-ups fetched successfully',
+      interests,
+      count: interests.length
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/interests/sources
+ * Get all unique lead sources (Admin only)
+ */
+export const getSourcesHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const sources = await getAllSources();
+
+    return res.status(200).json({
+      sources
     });
   } catch (error) {
     next(error);

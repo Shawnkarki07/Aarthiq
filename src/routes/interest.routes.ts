@@ -4,7 +4,11 @@ import {
   getAllInterestsHandler,
   getBusinessInterestsHandler,
   updateInterestHandler,
-  addInterestFollowUpHandler
+  addInterestFollowUpHandler,
+  updateFollowUpHandler,
+  deleteFollowUpHandler,
+  getTodayFollowUpsHandler,
+  getSourcesHandler
 } from '../controllers/interest.controller';
 import { validate } from '../middlewares/validation.middleware';
 import { submitInterestSchema } from '../validators/interest.validator';
@@ -33,6 +37,30 @@ router.get(
   authenticate,
   authorize('ADMIN'),
   getAllInterestsHandler
+);
+
+/**
+ * @route   GET /api/interests/today
+ * @desc    Get all interests with follow-ups due today (Admin only)
+ * @access  Admin
+ */
+router.get(
+  '/today',
+  authenticate,
+  authorize('ADMIN'),
+  getTodayFollowUpsHandler
+);
+
+/**
+ * @route   GET /api/interests/sources
+ * @desc    Get all unique lead sources (Admin only)
+ * @access  Admin
+ */
+router.get(
+  '/sources',
+  authenticate,
+  authorize('ADMIN'),
+  getSourcesHandler
 );
 
 /**
@@ -69,6 +97,30 @@ router.post(
   authenticate,
   authorize('ADMIN'),
   addInterestFollowUpHandler
+);
+
+/**
+ * @route   PUT /api/interests/followups/:followUpId
+ * @desc    Update a follow-up (Admin only)
+ * @access  Admin
+ */
+router.put(
+  '/followups/:followUpId',
+  authenticate,
+  authorize('ADMIN'),
+  updateFollowUpHandler
+);
+
+/**
+ * @route   DELETE /api/interests/followups/:followUpId
+ * @desc    Delete a follow-up (Admin only)
+ * @access  Admin
+ */
+router.delete(
+  '/followups/:followUpId',
+  authenticate,
+  authorize('ADMIN'),
+  deleteFollowUpHandler
 );
 
 export default router;
