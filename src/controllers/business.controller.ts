@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import {
+  getAllCategories,
   listPendingBusinesses,
   approveBusiness,
   rejectBusiness,
@@ -13,6 +14,23 @@ import {
   approveRemovalRequest,
   rejectRemovalRequest
 } from '../services/business.service';
+
+/**
+ * GET /api/businesses/categories
+ * Get all categories
+ */
+export const getAllCategoriesHandler = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const categories = await getAllCategories();
+    return res.status(200).json({ categories });
+  } catch (error) {
+    next(error);
+  }
+};
 
 /**
  * GET /api/businesses/pending

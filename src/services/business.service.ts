@@ -2,6 +2,17 @@ import prisma from '../config/prisma.config';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../utils/errors';
 
 /**
+ * Get all categories
+ */
+export const getAllCategories = async () => {
+  const categories = await prisma.category.findMany({
+    orderBy: { name: 'asc' }
+  });
+
+  return categories;
+};
+
+/**
  * List pending businesses (Admin)
  * Now returns ALL businesses for review (PENDING, APPROVED, REJECTED)
  */
@@ -182,6 +193,7 @@ export const getApprovedBusinessById = async (businessId: string) => {
       id: true,
       name: true,
       registrationNumber: true,
+      panNumber: true,
       categoryId: true,
       category: {
         select: { id: true, name: true, slug: true }
@@ -189,10 +201,10 @@ export const getApprovedBusinessById = async (businessId: string) => {
       businessType: true,
       yearEstablished: true,
       location: true,
+      address: true,
       teamSize: true,
+      fundingStage: true,
       paidUpCapital: true,
-      investmentCapacityMin: true,
-      investmentCapacityMax: true,
       minimumInvestmentUnits: true,
       maximumInvestmentUnits: true,
       pricePerUnit: true,
@@ -204,13 +216,15 @@ export const getApprovedBusinessById = async (businessId: string) => {
       vision: true,
       mission: true,
       growthPlans: true,
+      promoterProfile: true,
       contactEmail: true,
       contactPhone: true,
       website: true,
       facebookUrl: true,
       linkedinUrl: true,
-      twitterUrl: true,
+      instagramUrl: true,
       logoUrl: true,
+      status: true,
       viewCount: true,
       isFeatured: true,
       createdAt: true,
@@ -256,6 +270,7 @@ export const listApprovedBusinesses = async (filters: {
         id: true,
         name: true,
         registrationNumber: true,
+        panNumber: true,
         categoryId: true,
         category: {
           select: { id: true, name: true, slug: true }
@@ -263,10 +278,12 @@ export const listApprovedBusinesses = async (filters: {
         businessType: true,
         yearEstablished: true,
         location: true,
+        address: true,
         teamSize: true,
+        fundingStage: true,
         paidUpCapital: true,
-        investmentCapacityMin: true,
-        investmentCapacityMax: true,
+        minimumInvestmentUnits: true,
+        maximumInvestmentUnits: true,
         pricePerUnit: true,
         expectedReturnOptions: true,
         estimatedMarketValuation: true,
@@ -276,14 +293,17 @@ export const listApprovedBusinesses = async (filters: {
         vision: true,
         mission: true,
         growthPlans: true,
+        promoterProfile: true,
         contactEmail: true,
         contactPhone: true,
         website: true,
         facebookUrl: true,
         linkedinUrl: true,
-        twitterUrl: true,
+        instagramUrl: true,
         logoUrl: true,
         status: true,
+        viewCount: true,
+        isFeatured: true,
         createdAt: true,
         updatedAt: true
       },
@@ -388,36 +408,52 @@ export const getBusinessDetailsByIdForAdmin = async (businessId: string) => {
 
 /**
  * Update business details (Admin)
+ * Admin can update ALL fields including category
  */
 export const updateBusiness = async (
   businessId: string,
   data: {
+    // Company Information
     name?: string;
+    registrationNumber?: string;
+    panNumber?: string;
     categoryId?: number;
     businessType?: string;
     yearEstablished?: number;
-    location?: string;
     teamSize?: string;
-    paidUpCapital?: number;
-    investmentCapacityMin?: number;
-    investmentCapacityMax?: number;
-    pricePerUnit?: number;
-    expectedReturnOptions?: string;
-    estimatedMarketValuation?: number;
-    ipoTimeHorizon?: string;
-    briefDescription?: string;
-    fullDescription?: string;
-    vision?: string;
-    mission?: string;
-    growthPlans?: string;
+    promoterProfile?: string;
+
+    // Contact Information
+    location?: string;
+    address?: string;
     contactEmail?: string;
     contactPhone?: string;
     website?: string;
     facebookUrl?: string;
     linkedinUrl?: string;
-    twitterUrl?: string;
+    instagramUrl?: string;
+
+    // Business Details
+    fundingStage?: string;
+    paidUpCapital?: string;
+    briefDescription?: string;
+    fullDescription?: string;
+    vision?: string;
+    mission?: string;
+    growthPlans?: string;
+
+    // Investment Parameters
+    minimumInvestmentUnits?: number;
+    maximumInvestmentUnits?: number;
+    pricePerUnit?: number;
+    expectedReturnOptions?: string;
+    estimatedMarketValuation?: number;
+    ipoTimeHorizon?: string;
+
+    // Status
     logoUrl?: string;
     isFeatured?: boolean;
+    isActive?: boolean;
   }
 ) => {
   const business = await prisma.business.findUnique({
@@ -428,9 +464,24 @@ export const updateBusiness = async (
     throw new NotFoundError('Business not found');
   }
 
+  // If categoryId is being updated, verify the category exists
+  if (data.categoryId) {
+    const category = await prisma.category.findUnique({
+      where: { id: data.categoryId }
+    });
+    if (!category) {
+      throw new BadRequestError('Invalid category');
+    }
+  }
+
   const updated = await prisma.business.update({
     where: { id: businessId },
-    data
+    data,
+    include: {
+      category: {
+        select: { id: true, name: true, slug: true }
+      }
+    }
   });
 
   return updated;

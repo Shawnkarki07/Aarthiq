@@ -12,6 +12,7 @@ export const getOwnBusinessProfile = async (businessLoginId: string) => {
       id: true,
       name: true,
       registrationNumber: true,
+      panNumber: true,
       categoryId: true,
       category: {
         select: { id: true, name: true, slug: true }
@@ -19,10 +20,13 @@ export const getOwnBusinessProfile = async (businessLoginId: string) => {
       businessType: true,
       yearEstablished: true,
       location: true,
+      address: true,
       teamSize: true,
+      promoterProfile: true,
       paidUpCapital: true,
-      investmentCapacityMin: true,
-      investmentCapacityMax: true,
+      fundingStage: true,
+      minimumInvestmentUnits: true,
+      maximumInvestmentUnits: true,
       pricePerUnit: true,
       expectedReturnOptions: true,
       estimatedMarketValuation: true,
@@ -37,10 +41,11 @@ export const getOwnBusinessProfile = async (businessLoginId: string) => {
       website: true,
       facebookUrl: true,
       linkedinUrl: true,
-      twitterUrl: true,
+      instagramUrl: true,
       logoUrl: true,
       status: true,
       rejectionReason: true,
+      isActive: true,
       viewCount: true,
       isFeatured: true,
       createdAt: true,
@@ -62,13 +67,16 @@ export const updateOwnBusinessProfile = async (
   businessLoginId: string,
   data: {
     name?: string;
+    registrationNumber?: string;
+    panNumber?: string;
     businessType?: string;
     yearEstablished?: number;
     location?: string;
+    address?: string;
     teamSize?: string;
-    paidUpCapital?: number;
-    investmentCapacityMin?: number;
-    investmentCapacityMax?: number;
+    promoterProfile?: string;
+    paidUpCapital?: string;
+    fundingStage?: string;
     minimumInvestmentUnits?: number;
     maximumInvestmentUnits?: number;
     pricePerUnit?: number;
@@ -80,12 +88,11 @@ export const updateOwnBusinessProfile = async (
     vision?: string;
     mission?: string;
     growthPlans?: string;
-    contactEmail?: string;
     contactPhone?: string;
     website?: string;
     facebookUrl?: string;
     linkedinUrl?: string;
-    twitterUrl?: string;
+    instagramUrl?: string;
   }
 ) => {
   // Verify business exists and belongs to this user

@@ -9,6 +9,12 @@ export const updateBusinessProfileSchema = z.object({
       .min(2, 'Business name must be at least 2 characters')
       .max(100, 'Business name is too long')
       .optional(),
+    registrationNumber: z.string()
+      .max(100, 'Registration number is too long')
+      .optional(),
+    panNumber: z.string()
+      .max(50, 'PAN number is too long')
+      .optional(),
     businessType: z.string()
       .max(100, 'Business type is too long')
       .optional(),
@@ -20,17 +26,20 @@ export const updateBusinessProfileSchema = z.object({
     location: z.string()
       .max(100, 'Location is too long')
       .optional(),
+    address: z.string()
+      .max(255, 'Address is too long')
+      .optional(),
     teamSize: z.string()
       .max(50, 'Team size description is too long')
       .optional(),
-    paidUpCapital: z.number()
-      .nonnegative('Paid up capital must be non-negative')
+    promoterProfile: z.string()
+      .max(500, 'Promoter profile is too long')
       .optional(),
-    investmentCapacityMin: z.number()
-      .nonnegative('Investment capacity must be non-negative')
+    paidUpCapital: z.string()
+      .max(100, 'Paid up capital is too long')
       .optional(),
-    investmentCapacityMax: z.number()
-      .nonnegative('Investment capacity must be non-negative')
+    fundingStage: z.string()
+      .max(100, 'Funding stage is too long')
       .optional(),
     minimumInvestmentUnits: z.number()
       .int('Minimum investment units must be an integer')
@@ -54,7 +63,7 @@ export const updateBusinessProfileSchema = z.object({
       .optional(),
     briefDescription: z.string()
       .min(10, 'Brief description must be at least 10 characters')
-      .max(200, 'Brief description is too long')
+      .max(2000, 'Brief description is too long')
       .optional(),
     fullDescription: z.string()
       .max(5000, 'Full description is too long')
@@ -68,10 +77,6 @@ export const updateBusinessProfileSchema = z.object({
     growthPlans: z.string()
       .max(2000, 'Growth plans is too long')
       .optional(),
-    contactEmail: z.string()
-      .email('Invalid email address')
-      .max(255, 'Email is too long')
-      .optional(),
     contactPhone: z.string()
       .max(20, 'Phone number is too long')
       .regex(/^[0-9+\-\s()]+$/, 'Invalid phone number format')
@@ -79,31 +84,24 @@ export const updateBusinessProfileSchema = z.object({
     website: z.string()
       .url('Invalid website URL')
       .max(255, 'Website URL is too long')
-      .optional(),
+      .optional()
+      .or(z.literal('')),
     facebookUrl: z.string()
       .url('Invalid Facebook URL')
       .max(255, 'Facebook URL is too long')
-      .optional(),
+      .optional()
+      .or(z.literal('')),
     linkedinUrl: z.string()
       .url('Invalid LinkedIn URL')
       .max(255, 'LinkedIn URL is too long')
-      .optional(),
-    twitterUrl: z.string()
-      .url('Invalid Twitter URL')
-      .max(255, 'Twitter URL is too long')
       .optional()
+      .or(z.literal('')),
+    instagramUrl: z.string()
+      .url('Invalid Instagram URL')
+      .max(255, 'Instagram URL is too long')
+      .optional()
+      .or(z.literal(''))
   }).refine(
-    (data) => {
-      if (data.investmentCapacityMin !== undefined && data.investmentCapacityMax !== undefined) {
-        return data.investmentCapacityMin <= data.investmentCapacityMax;
-      }
-      return true;
-    },
-    {
-      message: 'Minimum investment capacity cannot be greater than maximum',
-      path: ['investmentCapacityMin']
-    }
-  ).refine(
     (data) => {
       if (data.minimumInvestmentUnits !== undefined && data.maximumInvestmentUnits !== undefined) {
         return data.minimumInvestmentUnits <= data.maximumInvestmentUnits;

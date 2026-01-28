@@ -65,39 +65,46 @@ export const listAllBusinessesForAdminSchema = z.object({
 
 /**
  * Update business details (Admin)
+ * Admin can update ALL fields - no validation restrictions
  */
 export const updateBusinessSchema = z.object({
   params: z.object({
     id: z.string().uuid('Invalid business ID')
   }),
   body: z.object({
-    name: z.string().min(1).max(100).optional(),
-    categoryId: z.number().int().positive().optional(),
-    businessType: z.string().max(100).optional(),
-    yearEstablished: z.number().int().min(1900).max(new Date().getFullYear()).optional(),
-    location: z.string().max(100).optional(),
-    teamSize: z.string().max(50).optional(),
-    paidUpCapital: z.number().positive().optional(),
-    investmentCapacityMin: z.number().positive().optional(),
-    investmentCapacityMax: z.number().positive().optional(),
-    pricePerUnit: z.number().positive().optional(),
-    expectedReturnOptions: z.string().max(255).optional(),
-    estimatedMarketValuation: z.number().positive().optional(),
-    ipoTimeHorizon: z.string().max(100).optional(),
-    briefDescription: z.string().max(200).optional(),
-    fullDescription: z.string().optional(),
-    vision: z.string().optional(),
-    mission: z.string().optional(),
-    growthPlans: z.string().optional(),
-    contactEmail: z.string().email().optional(),
-    contactPhone: z.string().max(20).optional(),
-    website: z.string().url().optional(),
-    facebookUrl: z.string().url().optional(),
-    linkedinUrl: z.string().url().optional(),
-    twitterUrl: z.string().url().optional(),
-    logoUrl: z.string().url().optional(),
-    isFeatured: z.boolean().optional()
-  })
+    name: z.any().optional(),
+    registrationNumber: z.any().optional(),
+    panNumber: z.any().optional(),
+    categoryId: z.any().optional(),
+    businessType: z.any().optional(),
+    yearEstablished: z.any().optional(),
+    teamSize: z.any().optional(),
+    promoterProfile: z.any().optional(),
+    location: z.any().optional(),
+    address: z.any().optional(),
+    contactEmail: z.any().optional(),
+    contactPhone: z.any().optional(),
+    website: z.any().optional(),
+    facebookUrl: z.any().optional(),
+    linkedinUrl: z.any().optional(),
+    instagramUrl: z.any().optional(),
+    fundingStage: z.any().optional(),
+    paidUpCapital: z.any().optional(),
+    briefDescription: z.any().optional(),
+    fullDescription: z.any().optional(),
+    vision: z.any().optional(),
+    mission: z.any().optional(),
+    growthPlans: z.any().optional(),
+    minimumInvestmentUnits: z.any().optional(),
+    maximumInvestmentUnits: z.any().optional(),
+    pricePerUnit: z.any().optional(),
+    expectedReturnOptions: z.any().optional(),
+    estimatedMarketValuation: z.any().optional(),
+    ipoTimeHorizon: z.any().optional(),
+    logoUrl: z.any().optional(),
+    isFeatured: z.any().optional(),
+    isActive: z.any().optional(),
+  }).passthrough() // Allow any additional fields
 });
 
 /**

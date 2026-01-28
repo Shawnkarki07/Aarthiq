@@ -293,15 +293,15 @@ export const completeBusinessRegistration = async (
         businessLoginId: businessLogin.id,
         name: businessData.companyName,
         registrationNumber: businessData.registrationNumber,
+        panNumber: businessData.panNumber || null,
         categoryId: category.id,
         businessType: businessData.companySize || 'Not specified',
         yearEstablished: businessData.foundedYear ? parseInt(businessData.foundedYear) : new Date().getFullYear(),
         location: location,
         teamSize: businessData.companySize || 'Not specified',
+        fundingStage: businessData.fundingStage || null,
         // Financial fields with defaults
-        paidUpCapital: businessData.investmentSought ? parseFloat(businessData.investmentSought) : 0,
-        investmentCapacityMin: 0,
-        investmentCapacityMax: businessData.investmentSought ? parseFloat(businessData.investmentSought) : 0,
+        paidUpCapital: businessData.paidUpCapital || null,
         // Investment Parameters
         minimumInvestmentUnits: businessData.minimumInvestmentUnits ? parseInt(businessData.minimumInvestmentUnits) : null,
         maximumInvestmentUnits: businessData.maximumInvestmentUnits ? parseInt(businessData.maximumInvestmentUnits) : null,
@@ -315,13 +315,15 @@ export const completeBusinessRegistration = async (
         vision: businessData.vision || null,
         mission: businessData.mission || null,
         growthPlans: businessData.useOfFunds || null,
+        promoterProfile: businessData.promoterProfile || null,
         // Contact information
         contactEmail: businessData.email || request.email,
         contactPhone: businessData.phone,
+        address: businessData.address || null,
         website: businessData.website || null,
         facebookUrl: businessData.facebook || null,
         linkedinUrl: businessData.linkedin || null,
-        twitterUrl: businessData.twitter || null,
+        instagramUrl: businessData.instagram || null,
         logoUrl: null, // Will be updated after file processing
         status: 'PENDING'
       }

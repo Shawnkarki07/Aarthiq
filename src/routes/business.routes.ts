@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  getAllCategoriesHandler,
   listPendingBusinessesHandler,
   approveBusinessHandler,
   rejectBusinessHandler,
@@ -40,6 +41,16 @@ router.get(
   '/',
   validate(listApprovedBusinessesSchema),
   listApprovedBusinessesHandler
+);
+
+/**
+ * @route   GET /api/businesses/categories
+ * @desc    Get all categories
+ * @access  Public
+ */
+router.get(
+  '/categories',
+  getAllCategoriesHandler
 );
 
 /**
